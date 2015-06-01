@@ -75,6 +75,11 @@ th.run
 loop do
   input = read_char
   if input == "\t" # Tab
+    if state == :stopped
+      t1 = t1 + (Time.now - t_stop_start)
+      t_prev = t_prev + (Time.now - t_stop_start)
+    end
+
     state = :lap
   elsif input == " " or input == "\r" # Space or Enter
     if state == :stopped
