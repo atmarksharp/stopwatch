@@ -1,0 +1,105 @@
+#!/usr/bin/env ruby
+
+require 'io/console'
+
+def read_char
+  STDIN.echo = false
+  STDIN.raw!
+ 
+  input = STDIN.getc.chr
+
+  if input == "\e" then
+    input << STDIN.read_nonblock(3) rescue nil
+    input << STDIN.read_nonblock(2) rescue nil
+  end
+
+ensure
+  STDIN.echo = true
+  STDIN.cooked!
+ 
+  return input
+end
+
+def clear_line
+  $stdout.flush
+end
+
+def time_str(s0)
+  s1 = s0%3600
+  s2 = s1%60
+  hours = ((s0 - s1)/3600).to_i
+  mins = ((s1 - s2)/60).to_i
+  secs = "%06.3f"%s2
+  return "#{"%02i"%hours}:#{"%02i"%mins}:#{secs}"
+end
+
+# ========================================
+
+puts "[Enter] or [Space]: start/stop, [R]: reset, [Tab]: lap, [Ctrl+C]: exit."
+puts
+
+
+SLEEPTIME = 0.01
+state = :normal
+# state = :stopped
+# print "  #{time_str 0.0}\r"
+
+# t_stop_start = Time.now
+t_stop_start = nil
+t1 = Time.now
+t_prev = t1
+
+th = Thread.new do
+  loop do
+    sleep SLEEPTIME
+    t2 = Time.now
+    t = time_str (t2 - t1)
+    if state == :lap
+      t_lap = time_str (t2 - t_prev)
+      print "  #{t} (lap: #{t_lap})\n\r  #{t} \r"
+      state = :normal
+      t_prev = t2
+    elsif state == :stopping
+      state = :stopped
+    elsif state == :stopped
+      next
+    elsif state == :normal
+      print "  #{t}\r"
+    end
+
+    clear_line
+  end
+end
+th.run
+
+loop do
+  input = read_char
+  if input == "\t" # Tab
+    state = :lap
+  elsif input == " " or input == "\r" # Space or Enter
+    if state == :stopped
+      t1 = t1 + (Time.now - t_stop_start)
+      t_prev = t_prev + (Time.now - t_stop_start)
+      state = :normal
+    else
+      t_stop_start = Time.now
+      state = :stopping
+    end
+  elsif input == "r" # R
+    t1 = Time.now
+    t_prev = t1
+    t_stop_start = t1
+
+    puts "  ----------"
+    puts
+
+    if state == :stopped
+      print "  #{time_str 0.0}\r"
+    end
+  elsif input == "\u0003" # Ctrl + C
+    th.kill
+    print "\n"
+    exit 0
+  end
+end
+
