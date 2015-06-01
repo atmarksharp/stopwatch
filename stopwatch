@@ -90,6 +90,7 @@ loop do
     t_prev = t1
     t_stop_start = t1
 
+    puts
     puts "  ----------"
     puts
 
